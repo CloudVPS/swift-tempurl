@@ -1,4 +1,5 @@
 # Copyright (c) 2010-2012 OpenStack, LLC.
+# Copyright (c) 2013 CloudVPS
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -242,18 +243,10 @@ class TempURL(object):
         key = self._get_key(env, account)
         if not key:
             return self._invalid(env, start_response)
-        if env['REQUEST_METHOD'] == 'HEAD':
-            hmac_val = self._get_hmac(env, temp_url_expires, key,
-                                      request_method='GET')
-            if temp_url_sig != hmac_val:
-                hmac_val = self._get_hmac(env, temp_url_expires, key,
-                                          request_method='PUT')
-                if temp_url_sig != hmac_val:
-                    return self._invalid(env, start_response)
-        else:
-            hmac_val = self._get_hmac(env, temp_url_expires, key)
-            if temp_url_sig != hmac_val:
-                return self._invalid(env, start_response)
+
+        if not self._test_hmac(env, temp_url_expires, key, temp_url_sig):
+            return self._invalid(env, start_response)
+
         self._clean_incoming_headers(env)
         env['swift.authorize'] = lambda req: None
         env['swift.authorize_override'] = True
@@ -285,6 +278,28 @@ class TempURL(object):
             return start_response(status, headers, exc_info)
 
         return self.app(env, _start_response)
+
+    def _test_hmac(self, env, temp_url_expires, key, temp_url_sig):
+
+        parts = env['PATH_INFO'].split('/', 4) # ['', 'v1', 'a', 'c', 'o']
+
+        test_paths = [
+            env.get('PATH_INFO'),
+            "/%s/%s/%s" % (parts[1].split('_',2)[-1], parts[3], parts[4]),
+            "/%s/%s" % (parts[3], parts[4]),
+        ]
+
+        test_methods = [env['REQUEST_METHOD']]
+        if env['REQUEST_METHOD'] == 'HEAD':
+            test_methods = ['GET', 'PUT']
+
+        for path in test_paths:
+            for method in test_methods:
+                hmac_val = self._get_hmac(temp_url_expires, key, method, path)
+                if hmac_val == temp_url_sig:
+                    return True
+
+        return False
 
     def _get_account(self, env):
         """
@@ -366,7 +381,7 @@ class TempURL(object):
                 memcache.set('temp-url-key/%s' % account, key, timeout=60)
         return key
 
-    def _get_hmac(self, env, expires, key, request_method=None):
+    def _get_hmac(self, expires, key, request_method, hashed_path):
         """
         Returns the hexdigest string of the HMAC-SHA1 (RFC 2104) for
         the request.
@@ -383,11 +398,11 @@ class TempURL(object):
                                HEAD.
         :returns: hexdigest str of the HMAC-SHA1 for the request.
         """
-        if not request_method:
-            request_method = env['REQUEST_METHOD']
         return hmac.new(
-            key, '%s\n%s\n%s' % (request_method, expires,
-                                 env['PATH_INFO']), sha1).hexdigest()
+            key,
+            '%s\n%s\n%s' % (request_method, expires, hashed_path),
+            sha1
+        ).hexdigest()
 
     def _invalid(self, env, start_response):
         """
