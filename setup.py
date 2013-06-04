@@ -2,7 +2,7 @@
 
 from setuptools import setup
 
-setup(name='keystone_v1auth',
+setup(name='swift_tempurl',
     version='1.0.0',
     description='Tempurl with cname and domainremap support',
     author='Koert van der Veer, CloudVPS',
