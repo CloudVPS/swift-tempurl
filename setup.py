@@ -8,11 +8,12 @@ setup(name='swift_tempurl',
     author='Koert van der Veer, CloudVPS',
     author_email='koert@cloudvps.com',
     url='https://github.com/CloudVPS/swift-tempurl',
-    py_modules=['tempurl'],
+    py_modules=['tempurl', 'formpost'],
     requires=['swift(>=1.7)'],
     entry_points = {
         'paste.filter_factory': [
             'tempurl_cloudvps=tempurl:filter_factory',
+            'formpost_cloudvps=formpost:filter_factory',
         ]
     }
 )
