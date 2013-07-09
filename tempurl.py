@@ -285,7 +285,7 @@ class TempURL(object):
 
         test_paths = [
             env.get('PATH_INFO'),
-            "/%s/%s/%s" % (parts[1].split('_',2)[-1], parts[3], parts[4]),
+            "/%s/%s/%s" % (parts[2].split('_',1)[-1], parts[3], parts[4]),
             "/%s/%s" % (parts[3], parts[4]),
         ]
 
