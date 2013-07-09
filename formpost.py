@@ -432,7 +432,7 @@ class FormPost(object):
             raise FormInvalid('expired not an integer')
 
         parts = orig_env['PATH_INFO'].split('/', 3) # ['', 'v1', 'a', 'c']
-    print repr(parts)
+
         test_paths = [
             orig_env.get('PATH_INFO'),
             "/%s/%s" % (parts[2].split('_',1)[-1], parts[3]),
